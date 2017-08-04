@@ -32,10 +32,14 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private void registerLocationRequest() {
+		Log.d( TAG , "creating LocationRequest" );
 		final LocationRequest locationRequest = new LocationRequest();
 		// get updates only when the device actually checks location
+		locationRequest.setInterval( 1 );
+		locationRequest.setFastestInterval( 0 );
 		locationRequest.setPriority(LocationRequest.PRIORITY_NO_POWER);
 
+		Log.d( TAG , "checking settings" );
 		// check the settings allow us to perform the tracking we want to
 		// TODO: check this does not activates GPS if it is deactivated
 		final SettingsClient settingsClient = LocationServices.getSettingsClient(this);
@@ -46,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
 								.build());
 
 		settingsResponseTask.addOnSuccessListener(
-				this,
+				//this,
 				new OnSuccessListener<LocationSettingsResponse>() {
 					@Override
 					public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
@@ -55,24 +59,20 @@ public class MainActivity extends AppCompatActivity {
 
 						if (ActivityCompat.checkSelfPermission(
 								MainActivity.this,
-								Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-							ActivityCompat.checkSelfPermission(
+								Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ) {
+							ActivityCompat.requestPermissions(
 									MainActivity.this,
-									Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-							// TODO: Consider calling
-							//    ActivityCompat#requestPermissions
-							// here to request the missing permissions, and then overriding
-							//   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-							//                                          int[] grantResults)
-							// to handle the case where the user grants the permission. See the documentation
-							// for ActivityCompat#requestPermissions for more details.
-							return;
+									new String[]{ Manifest.permission.ACCESS_FINE_LOCATION },
+									1 );
+							// TODO: implement onRequestPermissionResult and handle refusal
 						}
+						Log.d( TAG , "Setting up location callback" );
 						locationProviderClient.requestLocationUpdates(
 								locationRequest,
 								new LocationCallback() {
 									@Override
 									public void onLocationResult(LocationResult locationResult) {
+										Log.d( TAG , "got location callback" );
 										for (Location l : locationResult.getLocations()) {
 											handleLocation(l);
 										}
@@ -83,13 +83,14 @@ public class MainActivity extends AppCompatActivity {
 				});
 
 		settingsResponseTask.addOnFailureListener(
-				this,
+				//this,
 				new OnFailureListener() {
 					@Override
 					public void onFailure( @NonNull Exception e) {
 						int statusCode = ((ApiException) e).getStatusCode();
 						switch (statusCode) {
 							case CommonStatusCodes.RESOLUTION_REQUIRED:
+								Log.e( TAG , "Resolution Required for settings failure" );
 								// Location settings are not satisfied, but this can be fixed
 								// by showing the user a dialog.
 								try {
@@ -104,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
 								}
 								break;
 							case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+								Log.e( TAG , "settings unavailable" );
 								// Location settings are not satisfied. However, we have no way
 								// to fix the settings so we won't show the dialog.
 								break;
